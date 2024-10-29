@@ -1,0 +1,10 @@
+.venv
+*.pyc
+*.ipynb
+*.ipynb_checkpoints
+*.ipynb_checkpoints_old
+*.ipynb_checkpoints_old_2
+*.ipynb_checkpoints_old_3
+
+clinical_trials.csv
+.vscode
