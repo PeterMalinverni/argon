@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clinical Trials Search</title>
+    <style>
+        /* Basic styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #searchForm {
+            margin-bottom: 20px;
+        }
+        #resultsTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #resultsTable th, #resultsTable td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        #resultsTable th {
+            background-color: #f2f2f2;
+        }
+        #loading {
+            display: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Clinical Trials Search</h1>
+    <form id="searchForm">
+        <input type="text" id="searchInput" placeholder="Enter search terms (e.g., NSCLC immunotherapy)" size="50" required>
+        <button type="submit">Search</button>
+    </form>
+    <div id="loading">Loading...</div>
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>NCT Number</th>
+                <th>Study Title</th>
+                <th>Conditions</th>
+                <th>Interventions</th>
+                <th>Study Status</th>
+                <th>Study URL</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Results will be appended here -->
+        </tbody>
+    </table>
+
+    <script>
+        const searchForm = document.getElementById('searchForm');
+        const searchInput = document.getElementById('searchInput');
+        const resultsTableBody = document.querySelector('#resultsTable tbody');
+        const loadingDiv = document.getElementById('loading');
+
+        searchForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const query = searchInput.value.trim();
+            if (!query) {
+                alert('Please enter a search term.');
+                return;
+            }
+
+            // Clear previous results
+            resultsTableBody.innerHTML = '';
+            loadingDiv.style.display = 'block';
+
+            // Fetch data from the back-end API
+            fetch(`http://localhost:5000/search?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    loadingDiv.style.display = 'none';
+
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+
+                    if (data.length === 0) {
+                        alert('No results found.');
+                        return;
+                    }
+
+                    data.forEach(trial => {
+                        const row = document.createElement('tr');
+
+                        const nctCell = document.createElement('td');
+                        nctCell.textContent = trial['NCT Number'];
+                        row.appendChild(nctCell);
+
+                        const titleCell = document.createElement('td');
+                        titleCell.textContent = trial['Study Title'];
+                        row.appendChild(titleCell);
+
+                        const conditionsCell = document.createElement('td');
+                        conditionsCell.textContent = trial['Conditions'];
+                        row.appendChild(conditionsCell);
+
+                        const interventionsCell = document.createElement('td');
+                        interventionsCell.textContent = trial['Interventions'];
+                        row.appendChild(interventionsCell);
+
+                        const statusCell = document.createElement('td');
+                        statusCell.textContent = trial['Study Status'];
+                        row.appendChild(statusCell);
+
+                        const urlCell = document.createElement('td');
+                        const link = document.createElement('a');
+                        link.href = trial['Study URL'];
+                        link.textContent = 'View';
+                        link.target = '_blank';
+                        urlCell.appendChild(link);
+                        row.appendChild(urlCell);
+
+                        resultsTableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    loadingDiv.style.display = 'none';
+                    console.error('Error:', error);
+                    alert('An error occurred while fetching data.');
+                });
+        });
+    </script>
+</body>
+</html>

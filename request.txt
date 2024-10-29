@@ -1,0 +1,14 @@
+# Define the search query
+$searchQuery = "NSCLC immunotherapy"
+
+# URL-encode the query to handle spaces and special characters
+$encodedQuery = [Uri]::EscapeDataString($searchQuery)
+
+# Construct the full URL
+$url = "http://localhost:5000/search?q=$encodedQuery"
+
+# Make the GET request and store the response
+$response = Invoke-RestMethod -Uri $url -Method GET
+
+# Display the response
+$response
