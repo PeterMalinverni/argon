@@ -3,39 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <title>Clinical Trials Search</title>
-    <style>
-        /* Basic styling */
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        #searchForm {
-            margin-bottom: 20px;
-        }
-        #resultsTable {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        #resultsTable th, #resultsTable td {
-            border: 1px solid #ddd;
-            padding: 8px;
-        }
-        #resultsTable th {
-            background-color: #f2f2f2;
-        }
-        #loading {
-            display: none;
-            font-weight: bold;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <h1>Clinical Trials Search</h1>
     <form id="searchForm">
         <input type="text" id="searchInput" placeholder="Enter search terms (e.g., NSCLC immunotherapy)" size="50" required>
+        <select id="stepsSelect">
+            <option value="0">Direct matches only</option>
+            <option value="1">1 step away</option>
+            <option value="2">2 steps away</option>
+            <option value="3">3 steps away</option>
+        </select>
         <button type="submit">Search</button>
     </form>
     <div id="loading">Loading...</div>
+    <div id="resultCount"></div>
     <table id="resultsTable">
         <thead>
             <tr>
@@ -55,13 +38,17 @@
     <script>
         const searchForm = document.getElementById('searchForm');
         const searchInput = document.getElementById('searchInput');
+        const stepsSelect = document.getElementById('stepsSelect');
         const resultsTableBody = document.querySelector('#resultsTable tbody');
         const loadingDiv = document.getElementById('loading');
+        const resultCountDiv = document.getElementById('resultCount');
 
         searchForm.addEventListener('submit', function(event) {
             event.preventDefault();
 
             const query = searchInput.value.trim();
+            const steps = stepsSelect.value;
+            
             if (!query) {
                 alert('Please enter a search term.');
                 return;
@@ -69,10 +56,11 @@
 
             // Clear previous results
             resultsTableBody.innerHTML = '';
+            resultCountDiv.innerHTML = '';
             loadingDiv.style.display = 'block';
 
             // Fetch data from the back-end API
-            fetch(`http://localhost:5000/search?q=${encodeURIComponent(query)}`)
+            fetch(`http://localhost:5000/search?q=${encodeURIComponent(query)}&steps=${steps}`)
                 .then(response => response.json())
                 .then(data => {
                     loadingDiv.style.display = 'none';
@@ -83,9 +71,11 @@
                     }
 
                     if (data.length === 0) {
-                        alert('No results found.');
+                        resultCountDiv.textContent = 'No results found.';
                         return;
                     }
+
+                    resultCountDiv.textContent = `Showing ${data.length} result${data.length === 1 ? '' : 's'}`;
 
                     data.forEach(trial => {
                         const row = document.createElement('tr');

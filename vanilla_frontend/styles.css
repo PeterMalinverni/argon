@@ -1,0 +1,49 @@
+/* Basic styling */
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    width: 95%;
+    background-color: #fff; /* Default light mode background */
+    color: #000; /* Default light mode text color */
+}
+
+/* Dark mode styles */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #121212; /* Dark mode background */
+        color: #e0e0e0; /* Dark mode text color */
+    }
+    #resultsTable th {
+        background-color: #333; /* Dark mode header background */
+    }
+    #resultsTable th, #resultsTable td {
+        border: 1px solid #444; /* Dark mode border color */
+    }
+    #loading {
+        color: #e0e0e0; /* Dark mode loading text color */
+    }
+    #resultCount {
+        color: #e0e0e0; /* Dark mode result count text color */
+    }
+}
+
+/* Existing styles */
+#searchForm {
+    margin-bottom: 20px;
+}
+#resultsTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+#resultsTable th, #resultsTable td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+#loading {
+    display: none;
+    font-weight: bold;
+}
+#resultCount {
+    margin: 10px 0;
+    font-weight: bold;
+}

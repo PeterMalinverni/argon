@@ -1,78 +1,87 @@
-import pandas as pd
-import re
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template, Response
 from flask_cors import CORS
+import pandas as pd
 
 app = Flask(__name__)
 CORS(app)
+df = pd.read_csv('clinical_trials.csv')
 
-# Load the dataset
-data = pd.read_csv('clinical_trials.csv')
 
-def preprocess_data(df):
-    df['search_text'] = df[['Study Title', 'Conditions', 'Interventions', 'Brief Summary']].fillna('').apply(lambda x: ' '.join(x), axis=1)
-    df['search_text'] = df['search_text'].str.lower()
-    return df
+def search_clinical_trials(df: pd.DataFrame, query: str, max_steps: int = 0) -> list:
+    """
+    Searches the clinical trials DataFrame for entries matching the query and expands the search
+    based on matching Conditions and Interventions up to a specified number of steps.
 
-data = preprocess_data(data)
+    Args:
+        df (pd.DataFrame): DataFrame containing clinical trials data.
+        query (str): Search query string.
+        max_steps (int, optional): Number of steps to expand the search. Defaults to 0.
 
-synonyms_dict = {
-    'nsclc': [
-        'nsclc',
-        'non small cell lung cancer',
-        'non small cell lung carcinoma',
-        'carcinoma of the lungs, non small cell',
-        'non-small cell lung cancer',
-        'non-small cell lung carcinoma',
-        'non–small-cell lung cancer'
-    ],
-    'immunotherapy': [
-        'immunotherapy',
-        'immunotherapeutic',
-        'immune therapy',
-        'immune-based therapy',
-        'immuno-oncology'
-    ],
-}
+    Returns:
+        list: List of dictionaries representing the search results.
+    """
 
-def get_synonyms(term):
-    term = term.lower()
-    synonyms = set()
-    for syn_list in synonyms_dict.values():
-        if term in syn_list:
-            synonyms.update(syn_list)
-    if not synonyms:
-        synonyms.add(term)
-    return list(synonyms)
+    df = df.astype(str)
+    current_entries = df[df.apply(lambda row: query.lower() in ' '.join(row).lower(), axis=1)]
 
-def search_trials(query):
-    terms = re.findall(r'\w+', query.lower())
-    term_synonyms_list = []
-    for term in terms:
-        synonyms = get_synonyms(term)
-        term_synonyms_list.append(synonyms)
-    def match_trial(text):
-        text = text.lower()
-        for synonyms in term_synonyms_list:
-            if not any(syn in text for syn in synonyms):
-                return False
-        return True
-    matches = data[data['search_text'].apply(match_trial)]
-    return matches
+    if current_entries.empty:
+        return []
 
-@ app.route('/search', methods=['GET'])
+    results_set = set(current_entries.index)
+    visited_entries = set(current_entries.index)
+
+    for step in range(max_steps):
+        conditions = set()
+        interventions = set()
+
+        for idx, row in current_entries.iterrows():
+            conditions.update(row['Conditions'].split('|'))
+            interventions.update(row['Interventions'].split('|'))
+
+        condition_matches = df[df['Conditions'].apply(
+            lambda x: any(cond in x.split('|') for cond in conditions))]
+        intervention_matches = df[df['Interventions'].apply(
+            lambda x: any(interv in x.split('|') for interv in interventions))]
+
+        new_entries = pd.concat([condition_matches, intervention_matches]).drop_duplicates()
+        new_entries = new_entries[~new_entries.index.isin(visited_entries)]
+
+        if new_entries.empty:
+            break
+
+        visited_entries.update(new_entries.index)
+        results_set.update(new_entries.index)
+        current_entries = new_entries
+
+    results = df.iloc[list(results_set)]
+    return results.to_dict(orient='records')
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+@app.route('/search', methods=['GET'])
 def search():
+    """
+    Handles the search requests.
+
+    Returns:
+        Response: JSON response containing the search results or an error message.
+    """
+
     query = request.args.get('q', '')
+    max_steps = int(request.args.get('steps', 0))
     if not query:
         return jsonify({'error': 'No query provided'}), 400
-    results = search_trials(query)
-    results = results[['NCT Number', 'Study Title', 'Conditions', 'Interventions', 'Study Status', 'Study URL']]
 
-    # Replace NaN with None
-    results = results.where(pd.notnull(results), None)
+    results = search_clinical_trials(df, query, max_steps=max_steps)
+    for result in results:
+        result['Interventions'] = ", ".join(result['Interventions'].split('|'))
+        result['Conditions'] = ", ".join(result['Conditions'].split('|'))
 
-    results_dict = results.to_dict(orient='records')
-    return jsonify(results_dict)
+    return jsonify(results)
 
 
 if __name__ == '__main__':
