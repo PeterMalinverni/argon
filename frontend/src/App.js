@@ -69,7 +69,7 @@ function App() {
 
   return (
     <ThemeProvider theme={darkTheme}>
-      <CssBaseline /> {/* This applies the theme's background color */}
+      <CssBaseline />
       <Container className="App">
         <Typography variant="h4" gutterBottom>
           Clinical Trials Search
